@@ -14,6 +14,6 @@
   modules = import ./modules; # NixOS modules
   overlays = import ./overlays; # nixpkgs overlays
 
-  dpdk = pkgs.callPackage ./pkgs/dpdk { };
-  spdk = pkgs.callPackage ./pkgs/spdk { };
+  dpdk = pkgs.callPackage ./pkgs/dpdk { inherit pkgs; };
+  spdk = pkgs.callPackage ./pkgs/spdk { inherit pkgs; };
 }
