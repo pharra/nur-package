@@ -1,5 +1,4 @@
-{ stdenv, lib
-, kernel
+{ stdenv, lib , kernel
 , fetchurl
 , pkg-config, meson, ninja, makeWrapper
 , libbsd, numactl, libbpf, zlib, libelf, jansson, openssl, libpcap, rdma-core
@@ -14,6 +13,7 @@
 }:
 
 let
+  #kernel = linuxPackages.kernel;
   mod = kernel != null;
   dpdkVersion = "23.07";
 in stdenv.mkDerivation rec {

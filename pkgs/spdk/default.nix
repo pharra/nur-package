@@ -1,100 +1,80 @@
-{ stdenv, lib
-, kernel
+{ lib, stdenv
+, fetchpatch
+, fetchFromGitHub
+, ncurses
+, python3
+, cunit
+, dpdk
+, libaio
+, libbsd
+, libuuid
+, numactl
+, openssl
 , fetchurl
-, pkg-config, meson, ninja, makeWrapper
-, libbsd, numactl, libbpf, zlib, libelf, jansson, openssl, libpcap, rdma-core
-, doxygen, python3, pciutils
-, withExamples ? []
-, shared ? false
-, machine ? (
-    if stdenv.isx86_64 then "nehalem"
-    else if stdenv.isAarch64 then "generic"
-    else null
-  )
 }:
 
 let
-  mod = kernel != null;
-  dpdkVersion = "22.11.1";
+  # The old version has some CVEs howver they should not affect SPDK's usage of the framework: https://github.com/NixOS/nixpkgs/pull/171648#issuecomment-1121964568
+  dpdk' = dpdk.overrideAttrs (old: rec {
+    name = "dpdk-21.11";
+    src = fetchurl {
+      url = "https://fast.dpdk.org/rel/${name}.tar.xz";
+      sha256 = "sha256-Mkbj7WjuKzaaXYviwGzxCKZp4Vf01Bxby7sha/Wr06E=";
+    };
+  });
 in stdenv.mkDerivation rec {
-  pname = "dpdk";
-  version = "${dpdkVersion}" + lib.optionalString mod "-${kernel.version}";
+  pname = "spdk";
+  version = "21.10";
 
-  src = fetchurl {
-    url = "https://fast.dpdk.org/rel/dpdk-${dpdkVersion}.tar.xz";
-    sha256 = "sha256-3gdkZfcXSg1ScUuQcuSDenJrqsgtj+fcZEytXIz3TUw=";
+  src = fetchFromGitHub {
+    owner = "spdk";
+    repo = "spdk";
+    rev = "v${version}";
+    sha256 = "sha256-pFynTbbSF1g58VD9bOhe3c4oCozeqE+35kECTQwDBDM=";
   };
 
-  nativeBuildInputs = [
-    makeWrapper
-    doxygen
-    meson
-    ninja
-    pkg-config
-    python3
-    python3.pkgs.sphinx
-    python3.pkgs.pyelftools
-  ];
-  buildInputs = [
-    jansson
-    libbpf
-    libelf
-    libpcap
-    numactl
-    openssl.dev
-    zlib
-    python3
-  ] ++ lib.optionals mod kernel.moduleBuildDependencies;
+  patches = [
+    # Backport of upstream patch for ncurses-6.3 support.
+    # Will be in next release after 21.10.
+    ./ncurses-6.3.patch
 
-  propagatedBuildInputs = [
-    # Propagated to support current DPDK users in nixpkgs which statically link
-    # with the framework (e.g. odp-dpdk).
-    rdma-core
-    # Requested by pkg-config.
-    libbsd
+    # DPDK 21.11 compatibility.
+    (fetchpatch {
+      url = "https://github.com/spdk/spdk/commit/f72cab94dd35d7b45ec5a4f35967adf3184ca616.patch";
+      sha256 = "sha256-sSetvyNjlM/hSOUsUO3/dmPzAliVcteNDvy34yM5d4A=";
+    })
+  ];
+
+  nativeBuildInputs = [
+    python3
+  ];
+
+  buildInputs = [
+    cunit dpdk' libaio libbsd libuuid numactl openssl ncurses
   ];
 
   postPatch = ''
-    patchShebangs config/arm buildtools
-  '' + lib.optionalString mod ''
-    # kernel_install_dir is hardcoded to `/lib/modules`; patch that.
-    sed -i "s,kernel_install_dir *= *['\"].*,kernel_install_dir = '$kmod/lib/modules/${kernel.modDirVersion}'," kernel/linux/meson.build
+    patchShebangs .
+
+    # glibc-2.36 adds arc4random, so we don't need the custom implementation
+    # here anymore. Fixed upstream in https://github.com/spdk/spdk/commit/43a3984c6c8fde7201d6c8dfe1b680cb88237269,
+    # but the patch doesn't apply here.
+    sed -i -e '1i #define HAVE_ARC4RANDOM 1' lib/iscsi/iscsi.c
   '';
 
-  mesonFlags = [
-    "-Dtests=false"
-    "-Denable_docs=true"
-    "-Denable_kmods=${lib.boolToString mod}"
-  ]
-  # kni kernel driver is currently not compatble with 5.11
-  ++ lib.optional (mod && kernel.kernelOlder "5.11") "-Ddisable_drivers=kni"
-  ++ lib.optional (!shared) "-Ddefault_library=static"
-  ++ lib.optional (machine != null) "-Dmachine=${machine}"
-  ++ lib.optional mod "-Dkernel_dir=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
-  ++ lib.optional (withExamples != []) "-Dexamples=${builtins.concatStringsSep "," withExamples}";
+  enableParallelBuilding = true;
 
-  postInstall = ''
-    # Remove Sphinx cache files. Not only are they not useful, but they also
-    # contain store paths causing spurious dependencies.
-    rm -rf $out/share/doc/dpdk/html/.doctrees
+  configureFlags = [ "--with-dpdk=${dpdk'}" ];
 
-    wrapProgram $out/bin/dpdk-devbind.py \
-      --prefix PATH : "${lib.makeBinPath [ pciutils ]}"
-  '' + lib.optionalString (withExamples != []) ''
-    mkdir -p $examples/bin
-    find examples -type f -executable -exec install {} $examples/bin \;
-  '';
-
-  outputs =
-    [ "out" "doc" ]
-    ++ lib.optional mod "kmod"
-    ++ lib.optional (withExamples != []) "examples";
+  env.NIX_CFLAGS_COMPILE = "-mssse3"; # Necessary to compile.
+  # otherwise does not find strncpy when compiling
+  NIX_LDFLAGS = "-lbsd";
 
   meta = with lib; {
-    description = "Set of libraries and drivers for fast packet processing";
-    homepage = "http://dpdk.org/";
-    license = with licenses; [ lgpl21 gpl2 bsd2 ];
-    platforms =  platforms.linux;
-    broken = mod && kernel.isHardened;
+    description = "Set of libraries for fast user-mode storage";
+    homepage = "https://spdk.io/";
+    license = licenses.bsd3;
+    platforms =  [ "x86_64-linux" ];
+    maintainers = with maintainers; [ orivej ];
   };
 }
