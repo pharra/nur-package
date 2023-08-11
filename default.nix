@@ -7,13 +7,13 @@
 #     nix-build -A mypackage
 
 { pkgs ? import <nixpkgs> { } }:
-
-{
+rec {
   # The `lib`, `modules`, and `overlay` names are special
   lib = import ./lib { inherit pkgs; }; # functions
   modules = import ./modules; # NixOS modules
   overlays = import ./overlays; # nixpkgs overlays
 
-  dpdk = pkgs.callPackage ./pkgs/dpdk { };
-  spdk = pkgs.callPackage ./pkgs/spdk { };
+  kernel = pkgs.callPackage ./pkgs/kernel { };
+  dpdk = pkgs.callPackage ./pkgs/dpdk { inherit kernel; };
+  spdk = pkgs.callPackage ./pkgs/spdk { inherit dpdk; };
 }

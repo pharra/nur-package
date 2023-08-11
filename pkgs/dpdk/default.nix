@@ -13,7 +13,6 @@
 }:
 
 let
-  #kernel = linuxPackages.kernel;
   mod = kernel != null;
   dpdkVersion = "23.07";
 in stdenv.mkDerivation rec {
