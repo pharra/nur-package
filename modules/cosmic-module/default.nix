@@ -1,10 +1,13 @@
-{ config, lib, pkgs, ... }:
-with lib;
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+with lib; let
   xcfg = config.services.xserver;
   cfg = xcfg.desktopManager.cosmic;
-in
-{
+in {
   options = {
     services.xserver.desktopManager.cosmic.enable = mkOption {
       type = types.bool;
@@ -16,7 +19,7 @@ in
     #services.xserver.displayManager.sessionPackages = [ pkgs.cosmic-session ];
 
     xdg.portal.enable = true;
-    xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-cosmic ];
+    xdg.portal.extraPortals = [pkgs.xdg-desktop-portal-cosmic];
 
     environment.systemPackages = with pkgs; [
       cosmic-applets
