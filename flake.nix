@@ -47,6 +47,9 @@
         pkgs = import nixpkgs {inherit system;};
       });
     packages = forAllSystems (system: nixpkgs.lib.filterAttrs (_: v: nixpkgs.lib.isDerivation v) self.legacyPackages.${system});
+
+    overlay = import ./overlay.nix;
+    nixosModules = nixpkgs.lib.mapAttrs (name: value: import value) (import ./modules);
     # format the nix code in this flake
     # alejandra is a nix formatter with a beautiful output
     formatter = forAllSystems (
