@@ -41,6 +41,20 @@
       "armv7l-linux"
     ];
     forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
+
+    cosmic-overlay = final: prev: {
+      cosmic-applets = cosmic-applets.packages.default;
+      cosmic-applibrary = cosmic-applibrary.packages.default;
+      cosmic-bg = cosmic-bg.packages.default;
+      cosmic-comp = cosmic-comp.packages.default;
+      cosmic-launcher = cosmic-launcher.packages.default;
+      cosmic-osd = cosmic-osd.packages.default;
+      cosmic-panel = cosmic-panel.packages.default;
+      cosmic-session = cosmic-session.packages.default;
+      cosmic-settings = cosmic-settings.packages.default;
+      cosmic-settings-daemon = cosmic-settings-daemon.packages.default;
+      xdg-desktop-portal-cosmic = xdg-desktop-portal-cosmic.packages.default;
+    };
   in {
     legacyPackages = forAllSystems (system:
       import ./default.nix {
@@ -48,7 +62,7 @@
       });
     packages = forAllSystems (system: nixpkgs.lib.filterAttrs (_: v: nixpkgs.lib.isDerivation v) self.legacyPackages.${system});
 
-    overlay = import ./overlay.nix;
+    overlay = import ./overlay.nix ++ [cosmic-overlay];
     nixosModules = nixpkgs.lib.mapAttrs (name: value: import value) (import ./modules);
     # format the nix code in this flake
     # alejandra is a nix formatter with a beautiful output
