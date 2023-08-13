@@ -15,7 +15,12 @@ with lib;
       # branchVersion needs to be x.y
       extraMeta.branch = versions.majorMinor version;
 
-      kernelPatches = [./mlx4.patch];
+      kernelPatches = [
+        {
+          name = "mlx4-kernelPatches";
+          patch = ./mlx4.patch;
+        }
+      ];
 
       src = fetchurl {
         url = "mirror://kernel/linux/kernel/v6.x/linux-${version}.tar.xz";
