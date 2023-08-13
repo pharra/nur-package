@@ -5,9 +5,13 @@
 # Having pkgs default to <nixpkgs> is fine though, and it lets you use short
 # commands such as:
 #     nix-build -A mypackage
-{pkgs ? import <nixpkgs> {}}: rec {
+{pkgs ? import <nixpkgs> {}}: let
+  selectedLinuxKernelPkg = pkgs.linux_6_4;
+in rec {
   # The `lib`, `modules`, and `overlay` names are special
   lib = import ./lib {inherit pkgs;}; # functions
   modules = import ./modules; # NixOS modules
   overlays = import ./overlays; # nixpkgs overlays
+
+  kernel = pkgs.callPackage ./pkgs/linux {inherit selectedLinuxKernelPkg;};
 }
