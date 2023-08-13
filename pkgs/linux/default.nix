@@ -1,31 +1,20 @@
-# Minimal Linux kernel configuration for a kernel with the following properties:
-# - x86_64
-# - relocatable
-# - initrd loading
-# - elf and shebang executables
-# - printk
-# - serial and tty
-# - hypervisor detection support
-# - dynamic module loading
-# - shutdown/poweroff
-#
-# The kernel config itself probably builds with a big variety of Linux kernel
-# configurations. All important drivers are built-in ("=Y"). There are no modules
-# build.
-{
-  lib,
-  # the selected Linux kernel from "pkgs.linux_*"
-  selectedLinuxKernelPkg,
-  pkgs,
-  buildLinux,
-} @ args:
-buildLinux (args
-  // rec {
-    version = "${selectedLinuxKernelPkg.version}";
-    src = selectedLinuxKernelPkg.src;
-    kernelPatches = [./mlx4.patch];
+{ lib, fetchurl, buildLinux, ... } @ args:
 
-    extraConfig = ''
-    '';
-  }
-  // (args.argsOverride or {}))
+with lib;
+
+buildLinux (args // rec {
+  version = "6.4.9";
+
+  # modDirVersion needs to be x.y.z, will automatically add .0 if needed
+  modDirVersion = versions.pad 3 version;
+
+  # branchVersion needs to be x.y
+  extraMeta.branch = versions.majorMinor version;
+
+  kernelPatches = [./mlx4.patch];
+
+  src = fetchurl {
+    url = "mirror://kernel/linux/kernel/v6.x/linux-${version}.tar.xz";
+    sha256 = "17ycanx738bgxg5wn536kbad4zzvj5ngygp9qhvz76draaca5f5q";
+  };
+} // (args.argsOverride or { }))
