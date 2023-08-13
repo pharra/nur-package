@@ -13,16 +13,18 @@
       "x86_64-linux"
     ];
     forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
-  in {
-    nixpkgs.config.allowUnfree = true;
-
     legacyPackages = forAllSystems (system:
       import ./default.nix {
-        pkgs = import nixpkgs {inherit system;};
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        };
       });
+  in {
+    inherit legacyPackages;
     packages = forAllSystems (system: nixpkgs.lib.filterAttrs (_: v: nixpkgs.lib.isDerivation v) self.legacyPackages.${system});
 
-    overlay = import ./overlay.nix;
+    overlay = legacyPackages.overlays;
     nixosModules = nixpkgs.lib.mapAttrs (name: value: import value) (import ./modules);
     # format the nix code in this flake
     # alejandra is a nix formatter with a beautiful output
