@@ -7,11 +7,12 @@
 #     nix-build -A mypackage
 {pkgs ? import <nixpkgs> {}}: let
   selectedLinuxKernelPkg = pkgs.linux_6_4;
+  kernel-pkg = pkgs.callPackage ./pkgs/linux {inherit selectedLinuxKernelPkg;};
 in rec {
   # The `lib`, `modules`, and `overlay` names are special
   lib = import ./lib {inherit pkgs;}; # functions
   modules = import ./modules; # NixOS modules
   overlays = import ./overlays; # nixpkgs overlays
 
-  kernel = pkgs.callPackage ./pkgs/linux {inherit selectedLinuxKernelPkg;};
+  kernel = pkgs.recurseIntoAttrs (pkgs.linuxPackagesFor kernel-pkg);
 }
