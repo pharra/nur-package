@@ -6,7 +6,7 @@
 # commands such as:
 #     nix-build -A mypackage
 {pkgs ? import <nixpkgs> {}}: let
-  linux_mlx = pkgs.callPackage ./pkgs/linux {};
+  linux_mlx = pkgs.recurseIntoAttrs (pkgs.linuxPackagesFor (pkgs.callPackage ./pkgs/linux {}));
 in rec {
   # The `lib`, `modules`, and `overlay` names are special
   lib = import ./lib {inherit pkgs;}; # functions
