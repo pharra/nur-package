@@ -3,5 +3,5 @@
   #
   # my-overlay = import ./my-overlay;
   dpdk-overlay = import ./dpdk;
-  looking-glass = import ./looking-glass;
+  looking-glass-overlay = import ./looking-glass;
 }
