@@ -25,7 +25,7 @@
     packages = forAllSystems (system: nixpkgs.lib.filterAttrs (_: v: nixpkgs.lib.isDerivation v) self.legacyPackages.${system});
 
     overlays.default = import ./overlay.nix;
-    
+
     nixosModules = import ./modules;
     # format the nix code in this flake
     # alejandra is a nix formatter with a beautiful output

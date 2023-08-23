@@ -14,4 +14,5 @@ in rec {
   overlays = import ./overlays; # nixpkgs overlays
 
   inherit linux_mlx;
+  spdk = pkgs.callPackage ./pkgs/spdk {};
 }
